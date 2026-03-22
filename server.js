@@ -11,6 +11,7 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }));
+app.set('trust proxy', 1);
 app.use(express.json());
 
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
