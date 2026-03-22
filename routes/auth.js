@@ -5,14 +5,14 @@ const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const { generateOTP, storeOTP, verifyOTP, sendOTP } = require('../services/otpService');
 const { log, getClientIp } = require('../services/logService');
-
+ 
 const router = express.Router();
-
+ 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10,
   message: { error: 'Too many login attempts, try again in 15 minutes' } });
 const otpLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 5,
   message: { error: 'Too many OTP attempts' } });
-
+ 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   const { userId, name, email, phone, pin } = req.body;
@@ -36,7 +36,7 @@ router.post('/register', async (req, res) => {
     res.status(500).json({ error: 'Registration failed' });
   }
 });
-
+ 
 // POST /api/auth/login  — Step 1: verify PIN, send OTP
 router.post('/login', loginLimiter, async (req, res) => {
   const { userId, pin } = req.body;
@@ -62,18 +62,26 @@ router.post('/login', loginLimiter, async (req, res) => {
     await storeOTP(user.id, otp);
     await sendOTP(user.phone, otp, user.user_id);
     await log({ userId: user.id, action: 'otp_sent', ipAddress: ip });
-    res.json({
+ 
+    const response = {
       message: 'PIN verified. OTP sent to your registered phone.',
       userId: user.id,
       name: user.name,
       otpSentTo: user.phone.replace(/(\d{2})\d+(\d{2})/, '$1****$2'),
-    });
+    };
+ 
+    if (process.env.OTP_DELIVERY === 'console') {
+      response.otp = otp;
+      response.demoMode = true;
+    }
+ 
+    res.json(response);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
   }
 });
-
+ 
 // POST /api/auth/verify-otp  — Step 2: verify OTP, return JWT (for App)
 router.post('/verify-otp', otpLimiter, async (req, res) => {
   const { userId, otp } = req.body;
@@ -101,7 +109,7 @@ router.post('/verify-otp', otpLimiter, async (req, res) => {
     res.status(500).json({ error: 'OTP verification failed' });
   }
 });
-
+ 
 // POST /api/auth/esp32/verify  — Called by ESP32 keypad
 router.post('/esp32/verify', async (req, res) => {
   const { userId, otp, lockerId, espDeviceId } = req.body;
@@ -112,12 +120,12 @@ router.post('/esp32/verify', async (req, res) => {
     const userResult = await db.query('SELECT id, user_id, name FROM users WHERE id=$1', [userId]);
     if (userResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     const user = userResult.rows[0];
-
+ 
     const lockerResult = await db.query(
       'SELECT id, locker_code, status, assigned_to FROM lockers WHERE id=$1', [lockerId]);
     if (lockerResult.rows.length === 0) return res.status(404).json({ error: 'Locker not found' });
     const locker = lockerResult.rows[0];
-
+ 
     if (locker.assigned_to !== user.id) {
       await log({ userId: user.id, lockerId: locker.id, action: 'esp32_unlock', status: 'failed',
         ipAddress: ip, deviceInfo: espDeviceId, notes: 'Locker not assigned to this user' });
@@ -139,5 +147,6 @@ router.post('/esp32/verify', async (req, res) => {
     res.status(500).json({ error: 'Verification failed' });
   }
 });
-
+ 
 module.exports = router;
+ 
