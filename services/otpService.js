@@ -4,7 +4,7 @@ const OTP_PREFIX = 'otp:';
 const EXPIRY = parseInt(process.env.OTP_EXPIRY_SECONDS || '300');
 
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(100000 + Math.random() * 9000).toString();
 }
 
 async function storeOTP(userId, otp) {

@@ -24,9 +24,11 @@
 #include <Keypad.h>
 
 // ===== CHANGE THESE 3 THINGS =====
-const char* WIFI_SSID      = "YOUR_WIFI_NAME";
-const char* WIFI_PASSWORD  = "YOUR_WIFI_PASSWORD";
-const char* BACKEND_URL    = "https://YOUR-APP.up.railway.app";
+const char* WIFI_SSID     = "YOUR_WIFI_NAME";
+const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
+const char* BACKEND_URL   = "https://smart-locker-backend-production.up.railway.app";
+const int   USER_DB_ID    = 1;   // change to the user's DB id
+const int   LOCKER_DB_ID  = 1;   // change to the locker's DB id
 // =================================
 
 // These come from the app after user logs in
